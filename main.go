@@ -45,7 +45,7 @@ const newPackagesWarnsXMLFile = prefix + "packages-warnings_new.xml"
 
 var playStorePkgName = []byte("com.android.vending")
 
-func main() {
+func patchPackagesList() {
 	plBuffer, err := os.ReadFile(packagesListFile)
 	if err != nil {
 		panic(err)
@@ -66,7 +66,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
 
+func patchPackagesXML() {
 	buffer, err := os.ReadFile(packagesXMLFile)
 	if err != nil {
 		panic(err)
@@ -154,7 +156,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
 
+func patchPackagesWarningsXML() {
 	warnsBuffer, err := os.ReadFile(packagesWarnsXMLFile)
 	if err != nil {
 		panic(err)
@@ -178,13 +182,39 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
 
+func fixPermissions() {
 	chownCmd := exec.Command("chown", "system:system", packagesListFile, packagesXMLFile, packagesWarnsXMLFile)
-	_, _ = chownCmd.CombinedOutput()
+	output, err := chownCmd.CombinedOutput()
+	if err != nil {
+		print(output)
+		panic(err)
+	}
 
 	chmodCmd := exec.Command("chmod", "640", packagesListFile, packagesXMLFile, packagesWarnsXMLFile)
-	_, _ = chmodCmd.CombinedOutput()
+	output, err = chmodCmd.CombinedOutput()
+	if err != nil {
+		print(output)
+		panic(err)
+	}
 
 	restoreconCmd := exec.Command("restorecon", packagesListFile, packagesXMLFile, packagesWarnsXMLFile)
-	_, _ = restoreconCmd.CombinedOutput()
+	output, err = restoreconCmd.CombinedOutput()
+	if err != nil {
+		print(output)
+		panic(err)
+	}
+}
+
+func main() {
+	patchPackagesList()
+	patchPackagesXML()
+	patchPackagesWarningsXML()
+	fixPermissions()
+
+	println("Done!")
+	println("You should reboot your phone to use the new package list.")
+	println("You can take a backup before reboot (it's recommended).")
+	println("Check", prefix, "folder for files with .bak suffix.")
 }
