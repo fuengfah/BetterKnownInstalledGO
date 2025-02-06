@@ -1,0 +1,74 @@
+name: Build CI
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+  branch_protection_rule:
+    types: [created, completed]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.22.x' ]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26d
+
+      - name: Install dependencies
+        run: go get .
+
+      - name: Build Android arm64
+        env:
+          GOOS: android
+          GOARCH: arm64
+          CGO_ENABLED: 1
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-androideabi24-clang
+        run: go build -v -o bki_go-${{ env.GOARCH }} main.go
+
+      - name: Build Android arm
+        env:
+          GOOS: android
+          GOARCH: arm
+          CGO_ENABLED: 1
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi24-clang
+        run: go build -v -o bki_go-${{ env.GOARCH }} main.go
+
+      - name: Build Android i386
+        env:
+          GOOS: android
+          GOARCH: 386
+          CGO_ENABLED: 1
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android24-clang
+        run: go build -v -o bki_go-${{ env.GOARCH }} main.go
+
+      - name: Build Android amd64
+        env:
+          GOOS: android
+          GOARCH: amd64
+          CGO_ENABLED: 1
+          CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android24-clang
+        run: go build -v -o bki_go-${{ env.GOARCH }} main.go
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Artifacts
+          path: bki_go-*
